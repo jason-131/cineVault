@@ -1,0 +1,27 @@
+.list-view-page {
+  padding-top: 140px;
+  padding-bottom: 4rem;
+}
+
+.list-header {
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.list-header h1 {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-list {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.empty-list p {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+}
