@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams } from 'react-router-dom';
-import { Star, BookmarkPlus, Calendar, Clock } from 'lucide-react';
+import { Star, BookmarkPlus, Calendar, Clock, Check } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import './MovieDetails.css';
 
@@ -12,7 +12,24 @@ const MovieDetails = () => {
   const [listLoading, setListLoading] = useState(false);
   const [showRatingUI, setShowRatingUI] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
+  const [userLists, setUserLists] = useState([]);
   const { user } = useContext(AuthContext);
+
+  useEffect(() => {
+    const fetchUserLists = async () => {
+      if (!user) return;
+      try {
+        const res = await fetch('http://localhost:5000/api/lists', {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        const data = await res.json();
+        setUserLists(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchUserLists();
+  }, [user]);
 
   useEffect(() => {
     const fetchMovieDetails = async () => {
@@ -53,47 +70,54 @@ const MovieDetails = () => {
     }
   };
 
-  const handleAddToList = async () => {
+  const handleToggleList = async (listName) => {
     setListLoading(true);
     try {
-      // First try to get user lists
-      const listsRes = await fetch('http://localhost:5000/api/lists', {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      const lists = await listsRes.json();
-      
+      let targetList = userLists.find(list => list.name === listName);
       let listId;
-      if (lists.length === 0) {
-        // Create a default list
+      
+      if (!targetList) {
+        // Create the list if it doesn't exist
         const createRes = await fetch('http://localhost:5000/api/lists', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${user.token}`
           },
-          body: JSON.stringify({ name: "Watchlist" })
+          body: JSON.stringify({ name: listName })
         });
-        const newList = await createRes.json();
-        listId = newList._id;
+        targetList = await createRes.json();
+        listId = targetList._id;
       } else {
-        listId = lists[0]._id; // Just add to the first list for now
+        listId = targetList._id;
       }
 
-      // Add movie to list
-      const addRes = await fetch(`http://localhost:5000/api/lists/${listId}/movie`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`
-        },
-        body: JSON.stringify({ movieId: id })
+      const isMovieInList = targetList.movies.includes(Number(id));
+
+      if (isMovieInList) {
+        // Remove movie
+        await fetch(`http://localhost:5000/api/lists/${listId}/movie/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+      } else {
+        // Add movie
+        await fetch(`http://localhost:5000/api/lists/${listId}/movie`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`
+          },
+          body: JSON.stringify({ movieId: id })
+        });
+      }
+
+      // Refresh user lists
+      const res = await fetch('http://localhost:5000/api/lists', {
+        headers: { Authorization: `Bearer ${user.token}` }
       });
+      setUserLists(await res.json());
 
-      if (addRes.ok) {
-        alert("Added to your list!");
-      } else {
-        alert("Failed to add to list.");
-      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -150,20 +174,40 @@ const MovieDetails = () => {
             <p>{movie.overview}</p>
           </div>
 
-          {user ? (
-            <div className="movie-actions-container">
-              <div className="movie-actions">
-                <button 
-                  className="btn btn-primary action-btn" 
-                  onClick={() => setShowRatingUI(!showRatingUI)} 
-                  disabled={ratingLoading}
-                >
-                  <Star size={18} /> {ratingLoading ? 'Saving...' : 'Rate Movie'}
-                </button>
-                <button className="btn btn-outline action-btn" onClick={handleAddToList} disabled={listLoading}>
-                  <BookmarkPlus size={18} /> {listLoading ? 'Saving...' : 'Add to List'}
-                </button>
-              </div>
+          {user ? (() => {
+            const planToWatchList = userLists.find(l => l.name === 'Plan to Watch');
+            const isPlanToWatch = planToWatchList && planToWatchList.movies.includes(Number(id));
+
+            const watchedList = userLists.find(l => l.name === 'Watched');
+            const isWatched = watchedList && watchedList.movies.includes(Number(id));
+
+            return (
+              <div className="movie-actions-container">
+                <div className="movie-actions">
+                  <button 
+                    className="btn btn-primary action-btn" 
+                    onClick={() => setShowRatingUI(!showRatingUI)} 
+                    disabled={ratingLoading}
+                  >
+                    <Star size={18} /> {ratingLoading ? 'Saving...' : 'Rate Movie'}
+                  </button>
+                  <button 
+                    className={`btn ${isPlanToWatch ? 'btn-primary' : 'btn-outline'} action-btn`}
+                    onClick={() => handleToggleList('Plan to Watch')} 
+                    disabled={listLoading}
+                  >
+                    <BookmarkPlus size={18} fill={isPlanToWatch ? 'currentColor' : 'none'} /> 
+                    {listLoading ? 'Saving...' : 'Plan to Watch'}
+                  </button>
+                  <button 
+                    className={`btn ${isWatched ? 'btn-primary' : 'btn-outline'} action-btn`}
+                    onClick={() => handleToggleList('Watched')} 
+                    disabled={listLoading}
+                  >
+                    <Check size={18} /> 
+                    {listLoading ? 'Saving...' : 'Watched'}
+                  </button>
+                </div>
               
               {showRatingUI && (
                 <div className="rating-ui-container animate-fade-in">
@@ -202,9 +246,10 @@ const MovieDetails = () => {
                     })}
                   </div>
                 </div>
-              )}
-            </div>
-          ) : (
+                )}
+              </div>
+            );
+          })() : (
             <div className="login-prompt">
               <p>Please log in to rate this movie or add it to a list.</p>
             </div>

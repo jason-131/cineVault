@@ -25,3 +25,28 @@
   color: var(--text-secondary);
   font-size: 1.25rem;
 }
+
+.remove-movie-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-dark);
+  border: 1px solid var(--accent-secondary);
+  color: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.remove-movie-btn:hover {
+  background: var(--accent-secondary);
+  color: white;
+  transform: scale(1.1);
+}
