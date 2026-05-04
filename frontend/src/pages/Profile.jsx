@@ -6,7 +6,6 @@ import './Profile.css';
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
-  const [ratings, setRatings] = useState([]);
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,15 +13,6 @@ const Profile = () => {
     const fetchUserData = async () => {
       if (!user) return;
       try {
-        // Fetch Ratings
-        const ratingsRes = await fetch('http://localhost:5000/api/ratings/user', {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        });
-        const ratingsData = await ratingsRes.json();
-        setRatings(Array.isArray(ratingsData) ? ratingsData : []);
-
         // Fetch Lists
         const listsRes = await fetch('http://localhost:5000/api/lists', {
           headers: {
@@ -57,28 +47,7 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="profile-content">
-        <div className="profile-section glass-panel animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          <div className="section-header">
-            <Star className="section-icon" />
-            <h2>Your Ratings ({ratings.length})</h2>
-          </div>
-          {loading ? <p>Loading...</p> : ratings.length === 0 ? (
-            <p className="empty-state">You haven't rated any movies yet.</p>
-          ) : (
-            <ul className="rating-list">
-              {ratings.map(rating => (
-                <li key={rating._id} className="rating-item">
-                  <span className="rating-movie-id">Movie ID: {rating.movieId}</span>
-                  <div className="rating-stars">
-                    <Star size={16} fill="var(--accent-primary)" color="var(--accent-primary)" />
-                    <span>{rating.rating} / 5</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      <div className="profile-content" style={{ display: 'block' }}>
 
         <div className="profile-section glass-panel animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="section-header">

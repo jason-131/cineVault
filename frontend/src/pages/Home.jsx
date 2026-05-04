@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import MovieCard from '../components/MovieCard';
 import './Home.css';
 
 const Home = () => {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userRatings, setUserRatings] = useState({});
   const [searchParams] = useSearchParams();
+  const { user } = useContext(AuthContext);
   const searchQuery = searchParams.get('search');
 
   useEffect(() => {
@@ -20,6 +23,20 @@ const Home = () => {
         const response = await fetch(endpoint);
         const data = await response.json();
         setMovies(data);
+
+        if (user) {
+          const ratingsRes = await fetch('http://localhost:5000/api/ratings/user', {
+            headers: { Authorization: `Bearer ${user.token}` }
+          });
+          const ratingsData = await ratingsRes.json();
+          if (Array.isArray(ratingsData)) {
+            const ratingsMap = {};
+            ratingsData.forEach(r => {
+              ratingsMap[r.movieId] = r.rating;
+            });
+            setUserRatings(ratingsMap);
+          }
+        }
       } catch (error) {
         console.error('Error fetching movies:', error);
       } finally {
@@ -47,7 +64,7 @@ const Home = () => {
         ) : movies.length > 0 ? (
           movies.map((movie, index) => (
             <div key={movie.id} style={{ animationDelay: `${0.1 * index}s` }} className="animate-fade-in">
-              <MovieCard movie={movie} />
+              <MovieCard movie={movie} userRating={userRatings[movie.id]} />
             </div>
           ))
         ) : (

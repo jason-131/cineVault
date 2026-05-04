@@ -11,6 +11,7 @@ const ListView = () => {
   const { user } = useContext(AuthContext);
   const [list, setList] = useState(null);
   const [movies, setMovies] = useState([]);
+  const [userRatings, setUserRatings] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,8 +41,27 @@ const ListView = () => {
       }
     };
 
+    const fetchRatings = async () => {
+      try {
+        const ratingsRes = await fetch('http://localhost:5000/api/ratings/user', {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        const ratingsData = await ratingsRes.json();
+        if (Array.isArray(ratingsData)) {
+          const ratingsMap = {};
+          ratingsData.forEach(r => {
+            ratingsMap[r.movieId] = r.rating;
+          });
+            setUserRatings(ratingsMap);
+        }
+      } catch (error) {
+        console.error('Error fetching ratings:', error);
+      }
+    };
+
     if (user) {
       fetchListAndMovies();
+      fetchRatings();
     }
   }, [id, user]);
 
@@ -123,7 +143,7 @@ const ListView = () => {
               >
                 <X size={16} />
               </button>
-              <MovieCard movie={movie} />
+              <MovieCard movie={movie} userRating={userRatings[movie.id]} />
             </div>
           ))}
         </div>
